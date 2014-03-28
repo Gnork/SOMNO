@@ -15,4 +15,5 @@ https://github.com/Gnork/SOMNODocumentation
 
 ###Bugreport:
 
-https://sourceforge.net/p/guse/bugs/219/
+* https://sourceforge.net/p/guse/bugs/219/
+* https://groups.google.com/forum/#!topic/scibus-user-forum/WLsTFhcbNns
