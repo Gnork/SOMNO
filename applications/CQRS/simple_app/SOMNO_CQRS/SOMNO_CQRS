@@ -1,0 +1,70 @@
+#!/bin/bash
+
+err() {
+	echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+	exit 1
+}
+
+if [[ -z ${MATLAB_HOME} ]]; then
+	err "Environment variable MATLAB_HOME is missing"
+fi
+
+if [[ ! -d ${MATLAB_HOME} ]]; then
+	err "Environment variable MATLAB_HOME is not pointing to a directory"
+fi
+
+# find execution scripts in the application folder
+path_of_algorithm=$(find . -name "run_*.sh")
+number_of_algorithms=$(echo ${path_of_algorithm} | wc -w)
+
+if [ ${number_of_algorithms} -lt 1 ]; then
+	err "There is no run script in the application folder"
+fi
+
+if [ ${number_of_algorithms} -gt 1 ]; then
+	err "There are ${number_of_algorithms} algorithms to choose from in the application folder"
+fi
+
+# extract name of algorithm using regex
+regex_for_algorithm="run_(.*)\.sh"
+[[ $path_of_algorithm =~ $regex_for_algorithm ]]
+name_of_algorithm=${BASH_REMATCH[1]}
+
+if [[ -z ${name_of_algorithm} ]]; then
+	err "Regex did not match any execution script"
+fi
+
+if [[ ! -f ${name_of_algorithm} ]]; then
+	err "Executable for algorithm ${name_of_algorithm} does not exist"
+fi
+
+# find header file of input data in the application repository
+path_of_input=$(find . -name "*.hea")
+number_of_inputs=$(echo ${path_of_input} | wc -w)
+
+if [ ${number_of_inputs} -lt 1 ]; then
+	err "There is no input header file in the application folder"
+fi
+
+if [ ${number_of_inputs} -gt 1 ]; then
+	err "There are ${number_of_inputs} input header files to choose from in the application folder"
+fi
+
+# extract name of input files
+regex_for_input="(.*)\.hea"
+[[ $path_of_input =~ $regex_for_input ]]
+name_of_input=${BASH_REMATCH[1]}
+
+if [[ -z ${name_of_input} ]]; then
+	err "Regex did not match any input header file"
+fi
+
+if [[ ! -f "${name_of_input}.dat" ]]; then
+	err "Input ${name_of_input}.dat does not exist"
+fi
+
+# set execution permissions for algorithm files
+chmod +x run_${name_of_algorithm}.sh
+chmod +x ${name_of_algorithm}
+
+./run_${name_of_algorithm}.sh $MATLAB_HOME ${name_of_input}

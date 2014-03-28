@@ -1,0 +1,6 @@
+session testsession1
+subject b000301
+project erflow
+host https://somnonetz-test.f4.htw-berlin.de/xnat
+user VALUE
+pwd VALUE
