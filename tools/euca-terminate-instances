@@ -1,0 +1,31 @@
+#!/bin/bash
+# ---------------------------------------
+# Terminates VMs using nova-api and ec2-api
+# replaces the corresponding euca2ools script
+# 2014-02-16
+# HTW Berlin
+# Christoph Jansen
+# original script by Jie Wu, Christoph Jansen, Dagmar Krefting
+
+# nova RC file location
+NOVA_RC_FILE="/opt/startVM/Somnonetz-Erflow-openrc.sh"
+# ec2 RC file location
+EC2_RC_FILE="/opt/startVM/ec2rc.sh"
+
+source ${NOVA_RC_FILE}
+source ${EC2_RC_FILE}
+
+EC2_ID=${5}
+echo "EC2 ID: ${EC2_ID}"
+
+IP=$(euca-describe-instances | grep ${EC2_ID} | awk '{print $4}')
+echo "IP: ${IP}"
+
+NOVA_ID=$(nova list | grep ${IP} | awk '{print $2}')
+echo "NOVA ID: ${NOVA_ID}"
+
+nova delete ${NOVA_ID}
+echo "Instance deleted!"
+
+nova floating-ip-delete ${IP}
+echo "Floating IP released!"

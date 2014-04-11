@@ -1,0 +1,81 @@
+#!/bin/bash
+# ---------------------------------------
+# Launches VMs using nova-api and ec2-api
+# replaces the corresponding euca2ools script
+# 2014-02-16
+# HTW Berlin
+# Christoph Jansen
+# original script by Jie Wu, Christoph Jansen, Dagmar Krefting
+
+#---------------------------------------
+# DEFAULT SETTINGS
+#---------------------------------------
+
+# nova RC file location
+NOVA_RC_FILE="/opt/startVM/Somnonetz-Erflow-openrc.sh"
+# ec2 RC file location
+EC2_RC_FILE="/opt/startVM/ec2rc.sh"
+# key name to authentication
+KEY_NAME="sn-erflow"
+# image id of default snapshot
+IMAGE_ID="fc1afa45-a5d4-4262-8dc5-13a033ce7424"
+# flavor id
+# m1.tiny: 1, m1.small=2, 1GB10GB=6840262b-6a6a-423c-9c77-27e0bc16f6ae
+FLAVOR_ID=2
+# private network id (somnonetz)
+PRIVATE_NETWORK_ID="0c4b7891-225d-4e01-8d2a-9977c8accc72"
+# public network name
+PUBLIC_NETWORK_NAME="public"
+# default instance name
+INSTANCE_NAME="snerf-"$(date +%s)
+
+source $NOVA_RC_FILE
+
+#----------------------------------
+# Helper functions
+#----------------------------------
+
+err() {
+	echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $@" >&2
+	exit 1
+}
+
+# recursive function to check the building status
+function checkStatus(){
+	local buildstatus=`nova show $INSTANCE_NAME | grep "status" | sed 's/ //g' | cut -d\| -f3`
+	if [ $buildstatus == "ACTIVE" ]; then
+		setNetwork
+	elif [ ${buildstatus} == "ERROR" ]; then
+		err "An error occurred while starting the virtual machine"
+	else
+		sleep 15
+		checkStatus
+	fi
+}
+
+function setNetwork(){
+	local IP=`nova floating-ip-create $PUBLIC_NETWORK_NAME | grep "$PUBLIC_NETWORK_NAME" | sed 's/ //g' | cut -d\| -f2`
+	nova add-floating-ip $INSTANCE_NAME $IP
+        source $EC2_RC_FILE
+        local ID=$(euca-describe-instances | grep ${IP} | awk '{ print $2 }')
+	echo "${ID} ${IP}"
+        echo -e "foo\t${ID}\tbar\t${IP}"
+	checkLog
+}
+
+function checkLog() {
+	#customized for DCI Bridge Image
+	local log=$(nova console-log $INSTANCE_NAME | grep "/home/dcibridge/apache-tomcat-6.0.37/bin/bootstrap.jar")
+	if [[ -z $log ]]; then
+		sleep 15
+		checkLog
+	fi
+}
+
+#----------------------------------
+# Launch machine
+#----------------------------------
+
+# launch an instanc from IMAGE_ID snapshot on network PRIVATE_NETWORK_ID
+boot_output=`nova boot $INSTANCE_NAME --flavor $FLAVOR_ID --image $IMAGE_ID --key_name $KEY_NAME --nic net-id=$PRIVATE_NETWORK_ID`
+checkStatus
